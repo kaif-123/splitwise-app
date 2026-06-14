@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SplitEasy — Shared Expenses</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+  .hidden { display: none !important; }
+  
+  /* NAV */
+  nav { background: #5c6bc0; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  nav h1 { font-size: 20px; }
+  nav button { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+
+  /* PAGES */
+  .page { max-width: 800px; margin: 30px auto; padding: 0 16px; }
+  
+  /* CARDS */
+  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .card h2 { margin-bottom: 16px; color: #5c6bc0; }
+
+  /* FORMS */
+  input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+  button.btn { background: #5c6bc0; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; width: 100%; }
+  button.btn:hover { background: #3f51b5; }
+  button.btn-sm { width: auto; padding: 6px 14px; font-size: 13px; }
+  button.btn-green { background: #43a047; }
+  button.btn-red { background: #e53935; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 8px 18px; border-radius: 20px; border: 2px solid #5c6bc0; background: white; color: #5c6bc0; cursor: pointer; font-size: 14px; }
+  .tab.active { background: #5c6bc0; color: white; }
+
+  /* BALANCE */
+  .balance-positive { color: #43a047; font-weight: bold; }
+  .balance-negative { color: #e53935; font-weight: bold; }
+
+  /* ISSUE LIST */
+  .issue-item { background: #fff8e1; border-left: 4px solid #ffc107; padding: 10px 14px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; }
+  .issue-item.skipped { border-color: #e53935; background: #ffebee; }
+  
+  /* EXPENSE LIST */
+  .expense-item { border-bottom: 1px solid #eee; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+  .expense-item:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <h1>💸 SplitEasy</h1>
+  <button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+</nav>
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="page">
+  <div class="card">
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button class="btn" onclick="login()">Login</button>
+    <p style="text-align:center;margin:12px 0">or</p>
+    <h2>Register</h2>
+    <input type="text" id="regName" placeholder="Name">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Password">
+    <button class="btn btn-green" onclick="register()">Register</button>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div id="mainPage" class="page hidden">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('groups')">Groups</button>
+    <button class="tab" onclick="showTab('expenses')">Expenses</button>
+    <button class="tab" onclick="showTab('balances')">Balances</button>
+    <button class="tab" onclick="showTab('import')">Import CSV</button>
+  </div>
+
+  <!-- GROUPS TAB -->
+  <div id="groupsTab">
+    <div class="card">
+      <h2>Create Group</h2>
+      <input type="text" id="groupName" placeholder="Group name (e.g. Flat Expenses)">
+      <button class="btn" onclick="createGroup()">Create Group</button>
+    </div>
+    <div class="card">
+      <h2>My Groups</h2>
+      <div id="groupsList">Loading...</div>
+    </div>
+  </div>
+
+  <!-- EXPENSES TAB -->
+  <div id="expensesTab" class="hidden">
+    <div class="card">
+      <h2>Add Expense</h2>
+      <select id="expGroupId" onchange="loadMembers()">
+        <option value="">Select Group</option>
+      </select>
+      <input type="text" id="expDesc" placeholder="Description">
+      <input type="number" id="expAmount" placeholder="Amount">
+      <select id="expCurrency">
+        <option value="INR">INR</option>
+        <option value="USD">USD</option>
+      </select>
+      <input type="date" id="expDate">
+      <select id="expSplitType">
+        <option value="equal">Equal Split</option>
+      </select>
+      <select id="expPaidBy">
+        <option value="">Who paid?</option>
+      </select>
+      <button class="btn" onclick="addExpense()">Add Expense</button>
+    </div>
+    <div class="card">
+      <h2>Expenses</h2>
+      <select id="viewGroupId" onchange="loadExpenses()">
+        <option value="">Select Group</option>
+      </select>
+      <div id="expensesList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- BALANCES TAB -->
+  <div id="balancesTab" class="hidden">
+    <div class="card">
+      <h2>Group Balances</h2>
+      <select id="balGroupId" onchange="loadBalances()">
+        <option value="">Select Group</option>
+      </select>
+      <div id="balancesList" style="margin-top:16px"></div>
+    </div>
+    <div class="card hidden" id="settleCard">
+      <h2>Record Settlement</h2>
+      <select id="settlePaidBy"><option value="">Who paid?</option></select>
+      <select id="settlePaidTo"><option value="">Who received?</option></select>
+      <input type="number" id="settleAmount" placeholder="Amount (INR)">
+      <button class="btn btn-green" onclick="recordSettlement()">Record Settlement</button>
+    </div>
+  </div>
+
+  <!-- IMPORT TAB -->
+  <div id="importTab" class="hidden">
+    <div class="card">
+      <h2>Import CSV</h2>
+      <select id="importGroupId">
+        <option value="">Select Group to import into</option>
+      </select>
+      <input type="file" id="csvFile" accept=".csv" style="margin-top:8px">
+      <button class="btn" style="margin-top:12px" onclick="importCSV()">Import</button>
+    </div>
+    <div class="card hidden" id="importReport">
+      <h2>Import Report</h2>
+      <div id="importSummary"></div>
+      <div id="importIssues" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:3000/api';
+let token = localStorage.getItem('token');
+let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+
+// Init
+if (token) showMain();
+
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  return res.json();
+}
+
+// AUTH
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const data = await api('/auth/login', 'POST', { email, password });
+  if (data.token) {
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    showMain();
+  } else alert(data.error);
+}
+
+async function register() {
+  const name = document.getElementById('regName').value;
+  const email = document.getElementById('regEmail').value;
+  const password = document.getElementById('regPassword').value;
+  const data = await api('/auth/register', 'POST', { name, email, password });
+  if (data.token) {
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    showMain();
+  } else alert(data.error);
+}
+
+function logout() {
+  localStorage.clear();
+  token = null;
+  document.getElementById('authPage').classList.remove('hidden');
+  document.getElementById('mainPage').classList.add('hidden');
+  document.getElementById('logoutBtn').classList.add('hidden');
+}
+
+function showMain() {
+  document.getElementById('authPage').classList.add('hidden');
+  document.getElementById('mainPage').classList.remove('hidden');
+  document.getElementById('logoutBtn').classList.remove('hidden');
+  loadGroups();
+  loadGroupDropdowns();
+}
+
+// TABS
+function showTab(tab) {
+  ['groups','expenses','balances','import'].forEach(t => {
+    document.getElementById(t+'Tab').classList.add('hidden');
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tab+'Tab').classList.remove('hidden');
+  event.target.classList.add('active');
+}
+
+// GROUPS
+async function createGroup() {
+  const name = document.getElementById('groupName').value;
+  if (!name) return alert('Enter group name');
+  const data = await api('/groups', 'POST', { name, member_ids: [currentUser.id], joined_at: new Date() });
+  if (data.id) { alert('Group created!'); loadGroups(); loadGroupDropdowns(); }
+  else alert(data.error);
+}
+
+async function loadGroups() {
+  const data = await api('/groups');
+  const el = document.getElementById('groupsList');
+  if (!data.length) { el.innerHTML = '<p>No groups yet</p>'; return; }
+  el.innerHTML = data.map(g => `
+    <div class="expense-item">
+      <span><strong>${g.name}</strong> — ${g.members?.map(m=>m.name).join(', ')}</span>
+    </div>
+  `).join('');
+}
+
+async function loadGroupDropdowns() {
+  const data = await api('/groups');
+  const selects = ['expGroupId','viewGroupId','balGroupId','importGroupId','settlePaidBy'];
+  ['expGroupId','viewGroupId','balGroupId','importGroupId'].forEach(id => {
+    const el = document.getElementById(id);
+    const current = el.value;
+    el.innerHTML = '<option value="">Select Group</option>' + 
+      data.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    if (current) el.value = current;
+  });
+}
+
+// MEMBERS
+async function loadMembers() {
+  const groupId = document.getElementById('expGroupId').value;
+  if (!groupId) return;
+  const data = await api('/groups');
+  const group = data.find(g => g.id == groupId);
+  if (!group) return;
+  const members = group.members || [];
+  document.getElementById('expPaidBy').innerHTML = 
+    '<option value="">Who paid?</option>' + members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+}
+
+// EXPENSES
+async function addExpense() {
+  const group_id = document.getElementById('expGroupId').value;
+  const description = document.getElementById('expDesc').value;
+  const amount = parseFloat(document.getElementById('expAmount').value);
+  const currency = document.getElementById('expCurrency').value;
+  const expense_date = document.getElementById('expDate').value;
+  const paid_by = document.getElementById('expPaidBy').value;
+
+  if (!group_id || !description || !amount || !paid_by) return alert('Fill all fields');
+
+  // Get members for equal split
+  const groups = await api('/groups');
+  const group = groups.find(g => g.id == group_id);
+  const members = group?.members || [];
+  const amount_inr = currency === 'USD' ? amount * 84 : amount;
+  const splitAmount = amount_inr / members.length;
+  const splits = members.map(m => ({ user_id: m.id, amount_owed: splitAmount }));
+
+  const data = await api('/expenses', 'POST', { group_id, description, paid_by, amount, currency, split_type: 'equal', expense_date, splits });
+  if (data.id) { alert('Expense added!'); loadExpenses(); }
+  else alert(data.error);
+}
+
+async function loadExpenses() {
+  const groupId = document.getElementById('viewGroupId').value;
+  if (!groupId) return;
+  const data = await api(`/expenses/group/${groupId}`);
+  const el = document.getElementById('expensesList');
+  if (!data.length) { el.innerHTML = '<p>No expenses yet</p>'; return; }
+  el.innerHTML = data.map(e => `
+    <div class="expense-item">
+      <div>
+        <strong>${e.description}</strong><br>
+        <small>${e.expense_date?.split('T')[0]} • Paid by ${e.paid_by_name}</small>
+      </div>
+      <div style="text-align:right">
+        <strong>₹${parseFloat(e.amount_inr).toFixed(0)}</strong><br>
+        <small>${e.currency !== 'INR' ? e.currency+' '+e.amount : ''}</small>
+      </div>
+    </div>
+  `).join('');
+}
+
+// BALANCES
+async function loadBalances() {
+  const groupId = document.getElementById('balGroupId').value;
+  if (!groupId) return;
+  const data = await api(`/expenses/balances/${groupId}`);
+  const el = document.getElementById('balancesList');
+  el.innerHTML = data.map(b => `
+    <div class="expense-item">
+      <span><strong>${b.name}</strong></span>
+      <span class="${b.balance >= 0 ? 'balance-positive' : 'balance-negative'}">
+        ${b.balance >= 0 ? '+' : ''}₹${parseFloat(b.balance).toFixed(0)}
+        ${b.balance >= 0 ? '(gets back)' : '(owes)'}
+      </span>
+    </div>
+  `).join('');
+  
+  document.getElementById('settleCard').classList.remove('hidden');
+  
+  // Populate settle dropdowns
+  ['settlePaidBy','settlePaidTo'].forEach(id => {
+    document.getElementById(id).innerHTML = 
+      '<option value="">Select</option>' + data.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  });
+}
+
+async function recordSettlement() {
+  const group_id = document.getElementById('balGroupId').value;
+  const paid_by = document.getElementById('settlePaidBy').value;
+  const paid_to = document.getElementById('settlePaidTo').value;
+  const amount = document.getElementById('settleAmount').value;
+  if (!paid_by || !paid_to || !amount) return alert('Fill all fields');
+  const data = await api('/expenses/settle', 'POST', { group_id, paid_by, paid_to, amount, settlement_date: new Date() });
+  if (data.id) { alert('Settlement recorded!'); loadBalances(); }
+}
+
+// IMPORT CSV
+async function importCSV() {
+  const groupId = document.getElementById('importGroupId').value;
+  const file = document.getElementById('csvFile').files[0];
+  if (!groupId || !file) return alert('Select group and file');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('group_id', groupId);
+
+  const res = await fetch(API + '/import', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  const data = await res.json();
+
+  document.getElementById('importReport').classList.remove('hidden');
+  document.getElementById('importSummary').innerHTML = `
+    <p>✅ <strong>${data.imported}</strong> expenses imported</p>
+    <p>⚠️ <strong>${data.issues_found}</strong> issues detected</p>
+  `;
+  
+  document.getElementById('importIssues').innerHTML = data.import_report?.map(issue => `
+    <div class="issue-item ${issue.action.includes('Skipped') ? 'skipped' : ''}">
+      <strong>Row ${issue.row}:</strong> ${issue.issue}<br>
+      <small>Action: ${issue.action}</small>
+    </div>
+  `).join('') || '';
+}
+</script>
+</body>
+</html>
