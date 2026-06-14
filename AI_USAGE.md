@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI_USAGE.md — AI Tool Usage Log
 
 ## Tool Used
@@ -86,3 +87,6 @@ if user's left_at date is before expense_date, exclude from split.
 | Deployment | Me |
 | Documentation | Me |
 | Understanding every line | Me |
+=======
+
+>>>>>>> 6f7eea6 (docs: add third AI error case - Meera exclusion bug)
