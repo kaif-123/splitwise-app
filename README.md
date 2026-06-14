@@ -4,7 +4,7 @@ A shared expense management application inspired by Splitwise. The application h
 
 ## AI Tool Used
 
-Claude (Anthropic) and ChatGPT were used as development assistants. All generated code was reviewed, modified, and tested before use.
+Claude (Anthropic) were used as development assistants. All generated code was reviewed, modified, and tested before use.
 
 ## Setup Instructions
 
