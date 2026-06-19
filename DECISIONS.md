@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # DECISIONS.md — Decision Log
 
 ## 1. Tech Stack Choice
@@ -153,5 +153,3 @@ Skipping loses valid expense data. Using as-is gives wrong balances.
 Normalization preserves intent while ensuring correct math. 
 Flagged in import report.
 =======
-
->>>>>>> a767ba7 (docs: add deployment decision - Render vs Railway)
