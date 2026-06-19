@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # AI_USAGE.md — AI Tool Usage Log
 
 ## Tool Used
