@@ -88,5 +88,3 @@ if user's left_at date is before expense_date, exclude from split.
 | Documentation | Me |
 | Understanding every line | Me |
 =======
-
->>>>>>> 6f7eea6 (docs: add third AI error case - Meera exclusion bug)
